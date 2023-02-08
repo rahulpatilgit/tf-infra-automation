@@ -1,0 +1,33 @@
+name: terraform-automation
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: "ap-south-1"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    name: terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::960724874021:role/Github
+          role-session-name: Github
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Apply terraform
+        run: terraform init && terraform apply --auto-approve
+        working-directory: terraform
+        
