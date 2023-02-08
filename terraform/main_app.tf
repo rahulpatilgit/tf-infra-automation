@@ -15,7 +15,7 @@ resource "aws_ecs_task_definition" "app-td" {
     "essential": true,
     "portMappings":[
         {
-            "containerPort": 80
+            "containerPort": 80,
             "hostPort": 80
         }
     ],
