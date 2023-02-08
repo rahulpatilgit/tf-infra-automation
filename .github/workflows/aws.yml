@@ -6,6 +6,13 @@ on:
 
 env:
   AWS_REGION: "ap-south-1"
+  IMAGE_TAG: "latest"
+  ECR_REPOSITORY: "tf-automation-repo"
+  TASK_DEFINITON: task-definition.json
+  TASK_DEFINITION_FAMILY: "app-td"
+  CONTAINER_NAME: "app"
+  SERVICE: "app-ecs-service"
+  CLUSTER: "app-cluster"
 
 permissions:
   id-token: write
@@ -26,8 +33,49 @@ jobs:
           role-to-assume: arn:aws:iam::960724874021:role/Github
           role-session-name: Github
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon Ecr
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: build, tag and push the image to Amazon Ecr
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry}}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        run |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./app/
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
       
       - name: Apply terraform
         run: terraform init && terraform apply --auto-approve
         working-directory: terraform
-        
+
+      - name: Export task definition
+        id: export-td
+        env:
+          TD_NAME: ${{ env.TASK_DEFINITON }}
+          TD_FAMILY: ${{ env.TASK_DEFINITION_FAMILY}}
+        run: |
+          rm -rf $TD_NAME
+          aws ecs describe-task-definition --task-definition $TD_FAMILY --query taskDefinition > $TD_NAME
+  
+      - name: Check exported Task Definition
+        run: |
+          ls
+
+      - name: Update the image in the task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition/@v1
+        with:
+          task-definition: ${{ env.TASK_DEFINITON }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+      
+      - name: Deploy task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ env.TASK_DEFINITON }}
+          service: ${{ env.SERVICE}}
+          cluster: ${{ env.CLUSTER}}
