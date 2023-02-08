@@ -49,7 +49,7 @@ resource "aws_lb_target_group" "app-tg" {
   target_type = "ip"
   vpc_id = module.vpc.vpc_id
   health_check {
-    mather = "200,301,302"
+    matcher = "200,301,302"
     path = "/"
   }
 }
