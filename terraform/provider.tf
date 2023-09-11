@@ -6,8 +6,8 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "video-tf-backend"
-    key = "backed"
+    bucket = "******"
+    key = "******"
     region = "ap-south-1"
   }
 }
